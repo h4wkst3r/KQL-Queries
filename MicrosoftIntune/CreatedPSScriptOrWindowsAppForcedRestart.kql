@@ -1,0 +1,21 @@
+// get windows app or powershell app creation events
+let timeframe = 24h;
+IntuneAuditLogs
+| where TimeGenerated > ago(timeframe) 
+| where OperationName == "Create MobileApp" or OperationName == "createDeviceManagementScript DeviceManagementScript"
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,24h)
+| project-rename TimeCreated = TimeGenerated, CreatingCorrelationID = CorrelationId, CreationIdentity = Identity, CreatingOperation = OperationName, CreationProperties = Properties
+
+// join with forced reboot events where the user creating the windows app or powershell script is the same
+| join(IntuneAuditLogs
+| where TimeGenerated > ago(timeframe) 
+| where OperationName == "rebootNow ManagedDevice" 
+
+// group by user and last 24 hours
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,24h)
+
+// rename output so you can see the correlation easier
+| project-rename TimeRebootInitiated = TimeGenerated, RebootCorrelationID = CorrelationId, RebootIdentity = Identity, RebootOperation = OperationName, RebootProperties = Properties) on TheUser,TimeKey
+| project TimeCreated,TimeRebootInitiated,CreationIdentity,RebootIdentity,CreatingOperation,RebootOperation,CreationProperties,RebootProperties

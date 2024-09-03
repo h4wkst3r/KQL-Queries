@@ -1,0 +1,3 @@
+IntuneAuditLogs 
+| where OperationName startswith "createDeviceManagementScript DeviceManagementScript" or OperationName == "Create MobileApp"
+| project Identity,OperationName,ResultType,SourceSystem,TimeGenerated,Properties

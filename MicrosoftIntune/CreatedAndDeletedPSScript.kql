@@ -1,0 +1,21 @@
+// get powershell script creation events
+let timeframe = 24h;
+IntuneAuditLogs
+| where TimeGenerated > ago(timeframe) 
+| where OperationName == "createDeviceManagementScript DeviceManagementScript"
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,24h)
+| project-rename TimeCreated = TimeGenerated, CreatingCorrelationID = CorrelationId, CreationIdentity = Identity, CreatingOperation = OperationName, CreationProperties = Properties
+
+// join with powershell script deletions where the user creating/deleting the script is the same
+| join(IntuneAuditLogs
+| where TimeGenerated > ago(timeframe) 
+| where OperationName == "deleteDeviceManagementScript DeviceManagementScript" 
+
+// group by user and last 24 hours
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,24h)
+
+// rename output so you can see the correlation easier
+| project-rename TimeDeleted = TimeGenerated, DeletionCorrelationID = CorrelationId, DeletionIdentity = Identity, DeletionOperation = OperationName, DeletionProperties = Properties) on TheUser,TimeKey
+| project TimeCreated,TimeDeleted,CreationIdentity,DeletionIdentity,CreatingOperation,DeletionOperation,CreationProperties,DeletionProperties

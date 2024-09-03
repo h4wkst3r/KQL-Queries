@@ -1,0 +1,21 @@
+// get windows app creation events
+let timeframe = 24h;
+IntuneAuditLogs
+| where TimeGenerated > ago(timeframe) 
+| where OperationName == "Create MobileApp"
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,24h)
+| project-rename TimeCreated = TimeGenerated, CreatingCorrelationID = CorrelationId, CreationIdentity = Identity, CreatingOperation = OperationName, CreationProperties = Properties
+
+// join with windows app deletions where the user creating/deleting the windows app is the same
+| join(IntuneAuditLogs
+| where TimeGenerated > ago(timeframe) 
+| where OperationName == "Delete MobileApp" 
+
+// group by user and last 24 hours
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,24h)
+
+// rename output so you can see the correlation easier
+| project-rename TimeDeleted = TimeGenerated, DeletionCorrelationID = CorrelationId, DeletionIdentity = Identity, DeletionOperation = OperationName, DeletionProperties = Properties) on TheUser,TimeKey
+| project TimeCreated,TimeDeleted,CreationIdentity,DeletionIdentity,CreatingOperation,DeletionOperation,CreationProperties,DeletionProperties
