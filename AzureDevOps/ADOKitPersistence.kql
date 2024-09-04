@@ -1,0 +1,9 @@
+// Allowlisted UPNs should likely stay empty
+let AllowlistedUpns = datatable(UPN:string)['foo@bar.com', 'test@foo.com'];
+
+// Distinct Operation Names that will flag
+let HasExactBlocklist = datatable(OperationName:string)['Token.SshCreateEvent','Token.PatCreateEvent'];
+AzureDevOpsAuditing
+| where (AuthenticationMechanism startswith "S2S_ServicePrincipal" or AuthenticationMechanism startswith "UserAuthToken") and UserAgent has_any ("ADOKit-21e233d4334f9703d1a3a42b6e2efd38") and (OperationName in (HasExactBlocklist)) and ActorUPN !in (AllowlistedUpns)
+| project TimeGenerated, AuthenticationMechanism, ActorUPN, ActorDisplayName, IpAddress, UserAgent, OperationName, Details, Data
+| extend timestamp = TimeGenerated, AccountCustomEntity = ActorUPN, IPCustomEntity = IpAddress

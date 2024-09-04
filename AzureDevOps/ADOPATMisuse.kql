@@ -1,0 +1,14 @@
+// Allowlisted UPNs should likely stay empty
+let AllowlistedUpns = datatable(UPN:string)['foo@bar.com', 'test@foo.com'];
+
+// Operation Name parts that will alert
+let HasAnyBlocklist = datatable(OperationNamePart:string)['Security.','Project.','AuditLog.','Extension.'];
+
+// Distinct Operation Names that will flag
+let HasExactBlocklist = datatable(OperationName:string)['Group.UpdateGroupMembership.Add','Library.ServiceConnectionExecuted','Pipelines.PipelineModified',
+'Release.ReleasePipelineModified', 'Git.RefUpdatePoliciesBypassed'];
+AzureDevOpsAuditing
+| where (AuthenticationMechanism startswith "PAT" or AuthenticationMechanism startswith "UserAuthToken") and (OperationName has_any (HasAnyBlocklist) or OperationName in (HasExactBlocklist))
+  and ActorUPN !in (AllowlistedUpns)
+| project TimeGenerated, AuthenticationMechanism, ProjectName, ActorUPN, ActorDisplayName, IpAddress, UserAgent, OperationName, Details, Data
+| extend timestamp = TimeGenerated, AccountCustomEntity = ActorUPN, IPCustomEntity = IpAddress
