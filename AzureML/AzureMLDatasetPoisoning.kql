@@ -1,0 +1,6 @@
+AmlDataSetEvent
+| where OperationName endswith "WORKSPACES/DATASETS/REGISTERED/WRITE" and
+isnotempty(AmlDatasetId) and ResultType == "Succeeded" and
+isnotempty(AmlDatasetName)
+| project
+TimeGenerated,ResultType,Identity,OperationName,AmlDatasetId,AmlDatasetName

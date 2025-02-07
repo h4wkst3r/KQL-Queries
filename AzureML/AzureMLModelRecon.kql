@@ -1,0 +1,4 @@
+AmlModelsEvent
+| where OperationName endswith "WORKSPACES/MODELS/READ" and
+isempty(AmlModelName)
+| project TimeGenerated,ResultType,Identity,OperationName,AmlModelName

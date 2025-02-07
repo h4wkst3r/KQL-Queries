@@ -1,0 +1,18 @@
+let timeframe = 5m;
+AmlModelsEvent
+| where TimeGenerated > ago(timeframe)
+| where OperationName endswith "WORKSPACES/MODELS/READ" and
+isnotempty(AmlModelName) and ResultType == "Succeeded"
+| extend TimeKey = bin(TimeGenerated,5m)
+| project-rename ModelReadTime = TimeGenerated, ModelReadResult = ResultType,
+ModelReadIdentity = Identity, ModelReadOperation = OperationName, ModelName =
+AmlModelName
+| join(StorageBlobLogs
+| where TimeGenerated > ago(timeframe)
+| where OperationName == "GetBlob" and StatusText == "Success"
+| extend TimeKey = bin(TimeGenerated, 5m)
+| project-rename BlobReadTime = TimeGenerated, BlobStorageAccount =
+AccountName, BlobOperationName = OperationName, BlobURI = Uri
+) on TimeKey
+| project ModelReadTime, BlobReadTime, ModelReadIdentity, BlobStorageAccount,
+ModelReadOperation, BlobOperationName, ModelName, BlobURI

@@ -1,0 +1,23 @@
+let timeframe = 5m;
+AmlDataSetEvent
+| where TimeGenerated > ago(timeframe)
+| where OperationName endswith "WORKSPACES/DATASETS/REGISTERED/READ" and
+isnotempty(AmlDatasetId) and ResultType == "Succeeded"
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated,5m)
+| project-rename DataSetReadTime = TimeGenerated, DatasetReadResult =
+ResultType, DatasetReadIdentity = Identity, DatasetReadOperation =
+OperationName, DatasetID = AmlDatasetId
+| join(AmlDataStoreEvent
+| where TimeGenerated > ago(timeframe)
+| where OperationName endswith "WORKSPACES/DATASTORES/READ" and
+isnotempty(AmlDatastoreName) and ResultType == "Succeeded"
+| extend TheUser = tostring(Identity)
+| extend TimeKey = bin(TimeGenerated, 5m)
+| project-rename DatastoreReadTime = TimeGenerated, DataStoreResult =
+ResultType, DatastoreIdentity = Identity, DatastoreReadOperation =
+OperationName, DatastoreName = AmlDatastoreName
+) on TheUser,TimeKey
+| project DataSetReadTime, DatastoreReadTime, DatasetReadIdentity,
+DatastoreIdentity, DatasetReadOperation, DatastoreReadOperation, DatasetID,
+DatastoreName

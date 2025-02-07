@@ -1,0 +1,3 @@
+StorageBlobLogs |
+where UserAgentHeader == "MLOKit-e977ac02118a3cb2c584d92a324e41e9" |
+project TimeGenerated,OperationName,CallerIpAddress,UserAgentHeader,Uri

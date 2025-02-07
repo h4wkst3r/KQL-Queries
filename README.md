@@ -5,3 +5,4 @@ Collection of defensive KQL queries
 
 * [Azure DevOps](AzureDevOps)
 * [Microsoft Intune](MicrosoftIntune)
+* [Azure ML](AzureML)

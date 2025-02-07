@@ -1,0 +1,4 @@
+AmlDataSetEvent
+| where OperationName endswith "WORKSPACES/DATASETS/REGISTERED/READ" and
+isempty(AmlDatasetId)
+| project TimeGenerated,ResultType,Identity,OperationName,AmlDatasetId
