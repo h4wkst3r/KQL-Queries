@@ -32,6 +32,12 @@ This query will shown when a user has listed all models within a workspace, whic
 
 This query will show when a user has read a model from a workspace and also downloaded a file from an Azure storage blob.
 
+## Model Poisoning
+
+`AzureMLModelPoisoning.kql`
+
+This query will show when a user has read a model from a workspace and also uploaded a file to an Azure storage blob.
+
 ## MLOKit Use
 
 `MLOKitUsage.kql`
