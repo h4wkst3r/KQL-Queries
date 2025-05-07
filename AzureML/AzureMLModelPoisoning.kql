@@ -1,0 +1,20 @@
+StorageBlobLogs
+    | where OperationName has "PutBlob" or OperationName has "GetBlob"
+    | extend ResourceParts = split(_ResourceId, "/")
+    | extend FirstFiveParts = strcat(ResourceParts[0], "/", ResourceParts[1], "/", ResourceParts[2], "/", ResourceParts[3], "/", ResourceParts[4])
+    | project TimeGenerated, AccountName, OperationName, Uri, FirstFiveParts
+    | join kind=inner (
+        AmlDataStoreEvent
+        | where OperationName has "MICROSOFT.MACHINELEARNINGSERVICES/WORKSPACES/DATASTORES/READ"
+        | extend ResourceParts = split(_ResourceId, "/")
+        | extend FirstFiveParts = strcat(ResourceParts[0], "/", ResourceParts[1], "/", ResourceParts[2], "/", ResourceParts[3], "/", ResourceParts[4])
+        | project TimeGenerated, Identity, AmlDatastoreName, FirstFiveParts
+    ) on FirstFiveParts
+    | join kind=inner (
+        AmlModelsEvent
+        | where OperationName has "MICROSOFT.MACHINELEARNINGSERVICES/WORKSPACES/Models/READ" and isnotempty(AmlModelName)
+        | extend ResourceParts = split(_ResourceId, "/")
+        | extend FirstFiveParts = strcat(ResourceParts[0], "/", ResourceParts[1], "/", ResourceParts[2], "/", ResourceParts[3], "/", ResourceParts[4])
+        | project TimeGenerated, Identity, AmlModelName, FirstFiveParts
+    ) on FirstFiveParts
+    | project TimeGenerated, OperationName, Uri, Identity, AmlDatastoreName, AmlModelName
