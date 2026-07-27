@@ -1,0 +1,22 @@
+let timeframe = 24h;
+AzureActivity
+| where TimeGenerated > ago(timeframe)
+| where ResourceProviderValue =~ "MICROSOFT.MACHINELEARNINGSERVICES"
+| where OperationNameValue has_any ("WORKSPACES/COMPUTES/READ", "WORKSPACES/NOTEBOOKS/READ")
+    or OperationName has_any ("WORKSPACES/COMPUTES/READ", "WORKSPACES/NOTEBOOKS/READ")
+    or ResourceId has "/providers/Microsoft.MachineLearningServices/workspaces/" and ResourceId has_any ("/computes", "/notebooks")
+| extend Operation = toupper(coalesce(OperationNameValue, OperationName))
+| summarize
+    OperationCount = count(),
+    Operations = make_set(Operation, 20),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    Resources = make_set(ResourceId, 50)
+    by Caller, CallerIpAddress
+| where OperationCount >= 5
+    or array_length(set_intersect(Operations, dynamic([
+        "MICROSOFT.MACHINELEARNINGSERVICES/WORKSPACES/COMPUTES/READ",
+        "MICROSOFT.MACHINELEARNINGSERVICES/WORKSPACES/NOTEBOOKS/READ"
+    ]))) == 2
+| project FirstSeen, LastSeen, Caller, CallerIpAddress, OperationCount, Operations, Resources
+| order by LastSeen desc
