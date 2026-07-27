@@ -1,0 +1,14 @@
+let timeframe = 24h;
+AzureActivity
+| where TimeGenerated > ago(timeframe)
+| where ResourceProviderValue =~ "MICROSOFT.MACHINELEARNINGSERVICES"
+| where OperationNameValue =~ "MICROSOFT.MACHINELEARNINGSERVICES/WORKSPACES/JOBS/WRITE"
+    or OperationName =~ "MICROSOFT.MACHINELEARNINGSERVICES/WORKSPACES/JOBS/WRITE"
+    or ResourceId has "/providers/Microsoft.MachineLearningServices/workspaces/" and ResourceId has "/jobs/"
+| extend ParsedProperties = parse_json(Properties)
+| extend RequestBody = tostring(ParsedProperties.requestbody)
+| extend Command = extract(@"""command""\s*:\s*""([^""]+)""", 1, RequestBody)
+| extend EnvironmentId = extract(@"""environmentId""\s*:\s*""([^""]+)""", 1, RequestBody)
+| extend ComputeId = extract(@"""computeId""\s*:\s*""([^""]+)""", 1, RequestBody)
+| project TimeGenerated, Caller, CallerIpAddress, ActivityStatusValue, ResourceGroup, ResourceId, Command, EnvironmentId, ComputeId, CorrelationId
+| order by TimeGenerated desc

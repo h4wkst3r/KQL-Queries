@@ -1,0 +1,29 @@
+let timeframe = 24h;
+let environmentReads =
+    AzureActivity
+    | where TimeGenerated > ago(timeframe)
+    | where ResourceProviderValue =~ "MICROSOFT.MACHINELEARNINGSERVICES"
+    | where OperationNameValue has "WORKSPACES/ENVIRONMENTS/READ"
+        or OperationName has "WORKSPACES/ENVIRONMENTS/READ"
+        or ResourceId has "/providers/Microsoft.MachineLearningServices/workspaces/" and ResourceId has "/environments/"
+        | project EnvironmentReadTime = TimeGenerated, Caller, CallerIpAddress, ResourceId, CorrelationId;
+let dockerfileReads =
+    StorageBlobLogs
+    | where TimeGenerated > ago(timeframe)
+    | where OperationName == "GetBlob" and StatusText == "Success"
+    | where Uri has_any ("Dockerfile", "environment", "environments", "azureml")
+    | project BlobReadTime = TimeGenerated, CallerIpAddress, AccountName, Uri, UserAgentHeader;
+environmentReads
+| join kind=leftouter dockerfileReads on CallerIpAddress
+| where isnull(BlobReadTime) or BlobReadTime between ((EnvironmentReadTime - 30m) .. (EnvironmentReadTime + 30m))
+| summarize
+    EnvironmentReadCount = count(),
+    FirstSeen = min(EnvironmentReadTime),
+    LastSeen = max(EnvironmentReadTime),
+    EnvironmentResources = make_set(ResourceId, 50),
+    DockerfileUris = make_set(Uri, 50),
+    UserAgents = make_set(UserAgentHeader, 20)
+    by Caller, CallerIpAddress
+| where EnvironmentReadCount >= 3 or array_length(DockerfileUris) > 0
+| project FirstSeen, LastSeen, Caller, CallerIpAddress, EnvironmentReadCount, EnvironmentResources, DockerfileUris, UserAgents
+| order by LastSeen desc
